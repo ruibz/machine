@@ -1,12 +1,17 @@
 var http = require('http');
+var fs = require("fs");
 
 http.createServer(function (request, response) {
-	response.writeHead(200, {'Content-Type': 'text/plain'});
-	response.end('Hello World\n');
+    response.writeHead(200, {'Content-Type': 'text/plain'});
+
+    response.end('Hello World\n');
 }).listen(8888);
 
-var Client = require('ssh2').Client;
 
+console.log("it's done");
+
+/*
+var Client = require('ssh2').Client;
 var conn = new Client();
 conn.on('ready', function() {
     conn.exec('touch /home/ruibz/node.touch', function(err, stream) {
@@ -21,12 +26,13 @@ conn.on('ready', function() {
         });
     });
 }).connect({
-    host: '172.24.220.86',
+    host: '127.0.0.1',
     port: 22,
     username: 'ruibz',
-    password: 'asb~1234'
+    password: 'asb#1234'
     //privateKey: require('fs').readFileSync('/home/admin/.ssh/id_dsa')
 });
+*/
 
 
 console.log('Server running at http://127.0.0.1:8888/');
