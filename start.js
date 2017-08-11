@@ -1,34 +1,39 @@
 var http = require('http');
 var fs = require('fs');
 var path = require('path');
+var util = require('util');
 const readline = require('readline');
+
+function splitFileToLines(fileName, lines) {
+  const rl = readline.createInterface({
+    input: fs.createReadStream(fileName),
+    terminal: true
+  });
+  rl.on('line', (line) => {
+    fs.exists(fileName, function(exists){
+        if(!exists){
+            ;
+        }else{
+          var data=fs.readFileSync(fileName,"utf-8");
+          console.log(line.toString());
+          lines.push(line.toString());
+        }
+    });
+  }).on('close', () => {
+  console.log(util.inspect(lines));
+    ;
+  });
+
+}
 
 http.createServer(function(req, res){
   res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
   res.write('<html><head><meta charset="utf-8"><title>machines</title></head> <body>');
 
-  const rl = readline.createInterface({
-    input: fs.createReadStream('machines.txt'),
-    terminal: true
-  });
+  var lines = [];
+  var fileName = __dirname.toString() + "/machines.txt";
+  splitFileToLines(fileName, lines);
+  console.log("done!");
 
-  res.write('<table border="1">');
-  rl.on('line', (line) => {
-    var fileName = __dirname.toString() + "/files/" + line + ".txt";
-    fs.exists(fileName, function(exists){
-        if(!exists){
-            //res.write(fileName + ' not exists.');
-        }else{
-          var data=fs.readFileSync(fileName,"utf-8");
-          //res.write(data.toString());
-          res.write('<tr><td>' + data.toString() + '</td></tr>');
-        }
-    });
-
-  }).on('close', () => {
-    res.write('</table>');
-    res.write('</body></html>');
-    res.end();
-  });
 }).listen(8888);
 
