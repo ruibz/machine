@@ -56,7 +56,7 @@ event.on('readLineFromMachineFile', function (req, res, line) {
   var lines = [];
   var fileName = __dirname + "/files/" + line + ".txt";
   //var formData = '<form action="/" method="get"><input name="ip" value="' + line + '"/> <input type="submit" name="" value="update" /> </form>';
-  var formData = '<a href="http://127.0.0.1:8888/?ip=' + line + '#' + line + '">update</a>';
+  var formData = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=update' + '#' + line + '">update</a>';
   fs.exists(fileName, function(exists){
     if(exists){
       const rl = readline.createInterface({
