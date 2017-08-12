@@ -8,19 +8,34 @@ var fileSplit = require('./fileSplit');
 var test = require('./test');
 var event = new EventEmitter();
 
-event.on('readDoneFromMachineFile', function(req, res) { 
-  res.write('</table></body></html>');
-  res.end();
-}); 
-
-
 event.on('readLineFromMachineFile', function (req, res, line) {
-  res.write('<tr><th>' + line + '</th></tr>');
+  var lines = [];
+  var fileName = __dirname + "/files/" + line + ".txt";
+  fs.exists(fileName, function(exists){
+    if(exists){
+      const rl = readline.createInterface({
+        input: fs.createReadStream(fileName),
+        terminal: true
+      });
+      rl.on('line', (line) => {
+          lines.push(line.toString());
+      }).on('close', () => {
+        res.write('<table border="1"><tr>');
+        lines.forEach(function(item,index){  
+          res.write('<th>' + item + '</th>');
+        });
+        res.write('</tr></table><br>');
+        //console.log(util.inspect(lines));
+      });
+    }
+    else{
+      res.write('<table border="1"><tr><th>' + line + '</th><th>unknown</th></tr></table><br>');
+    }
+  });
 });
 
 function openMachineListFile(req, res, fileName)
 {
-  res.write('<table border="1">');
   const rl = readline.createInterface({
     input: fs.createReadStream(fileName),
     terminal: true
@@ -35,7 +50,7 @@ function openMachineListFile(req, res, fileName)
         }
     });
   }).on('close', () => {
-    event.emit('readDoneFromMachineFile', req, res);
+    ;
   });
 };
 
