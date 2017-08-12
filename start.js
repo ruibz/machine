@@ -56,7 +56,7 @@ event.on('readLineFromMachineFile', function (req, res, line) {
   var lines = [];
   var fileName = __dirname + "/files/" + line + ".txt";
   //var formData = '<form action="/" method="get"><input name="ip" value="' + line + '"/> <input type="submit" name="" value="update" /> </form>';
-  var formData = '<a href="http://127.0.0.1:8888/?ip=' + line + '">update</a>';
+  var formData = '<a href="http://127.0.0.1:8888/?ip=' + line + '#' + line + '">update</a>';
   fs.exists(fileName, function(exists){
     if(exists){
       const rl = readline.createInterface({
@@ -66,13 +66,13 @@ event.on('readLineFromMachineFile', function (req, res, line) {
       rl.on('line', (line) => {
           lines.push(line.toString());
       }).on('close', () => {
-        res.write('<table border="1" height="20px"><tr>');
+        res.write('<table border="1" height="20px"><tr><td id="' + line + '">' + line + '</td>');
         lines.forEach(function(item,index){  
           var indexOfSep = item.indexOf(":");
           var id = item.slice(0, indexOfSep);
           var value = item.slice(indexOfSep+1);
           if(id == "host") {
-            res.write('<td id="' + id + '">' + item + '</td>');
+            ;
           }
           else{
             res.write('<td><font size="3">' + item + '</font></td>');
