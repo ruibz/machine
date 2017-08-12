@@ -1,3 +1,5 @@
+var Client = require('ssh2').Client;
+var url = require('url');
 var http = require('http');
 var fs = require('fs');
 var path = require('path');
@@ -10,27 +12,36 @@ var express = require('express');
 var app = express();
 var querystring = require('querystring');
 
-app.post('/', function (req, res) {
-  console.log("post /");
-})
-
 app.get('/', function (req, res) {
   console.log("get /");
-  var body = "";
-  req.on('data', function (chunk) {
-    body += chunk;
-  });
-  req.on('end', function () {
-    body = querystring.parse(body);
-    console.log(util.inspect(body));
+  var params = url.parse(req.url, true).query;
  
-    if(body.ip) {
-      console.log("ip:" + body.ip);
-    }
-    else {
-        ;
-    }
-  });
+  if(params.ip) {
+    var allInfo = "";
+    console.log("ip:" + params.ip);
+    var conn = new Client();
+    conn.on('ready', function() {
+    conn.exec('sh /home/ruibz/machine.sh', function(err, stream) {
+      if (err) throw err;
+      stream.on('close', function(code, signal) {
+        fs.writeFile(__dirname + "/files/" + params.ip + ".txt", allInfo,  function(err) {
+        if (err) { return console.error(err); }
+        });
+        conn.end();
+      }).on('data', function(data) {
+        console.log('STDOUT: ' + data);
+        allInfo += data;
+      }).stderr.on('data', function(data) {
+        console.log('STDERR: ' + data);
+      });
+    });
+    }).connect({
+      host: params.ip,
+      port: 22,
+      username: 'ruibz',
+      privateKey: require('fs').readFileSync('/home/ruibz/.ssh/id_rsa')
+    });
+  }
 
   res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
   res.write('<html><head><meta charset="utf-8"><title>machines</title></head> <body>');
@@ -44,6 +55,7 @@ app.get('/', function (req, res) {
 event.on('readLineFromMachineFile', function (req, res, line) {
   var lines = [];
   var fileName = __dirname + "/files/" + line + ".txt";
+  var formData = '<form action="/" method="get"><input name="ip" value="' + line + '"/> <input type="submit" name="" value="update" /> </form>';
   fs.exists(fileName, function(exists){
     if(exists){
       const rl = readline.createInterface({
@@ -58,20 +70,19 @@ event.on('readLineFromMachineFile', function (req, res, line) {
           var indexOfSep = item.indexOf(":");
           var id = item.slice(0, indexOfSep);
           var value = item.slice(indexOfSep+1);
-          if(id == "cpu") {
+          if(id == "xxxx") {
             res.write('<th>' + id + '</th>');
           }
           else{
-            res.write('<th>' + value + '</th>');
+            res.write('<th>' + item + '</th>');
           }
         });
-        res.write('</tr></table><br>');
+        res.write('<th>' + formData + '</th></tr></table>');
         //console.log(util.inspect(lines));
       });
     }
     else{
-      var formData = '<form action="/" method="get"><input name="ip" value="' + line + '"/> <input type="submit" name="" value="update" /> </form>';
-      res.write('<table border="1"><tr><th>' + line + '</th><th>lost</th><th>' + formData + '</th></tr></table><br>');
+      res.write('<table border="1"><tr><th>' + line + '</th><th>lost</th><th>' + formData + '</th></tr></table>');
     }
   });
 });
