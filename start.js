@@ -21,21 +21,24 @@ app.get('/', function (req, res) {
     console.log("ip:" + params.ip);
     console.log("action:" + params.action);
     cmd = 'sh /home/ruibz/machine.sh'
-    if(params.action == "reboot") {
-      cmd += " reboot"
+    stateFile = __dirname + "/files/" + params.ip + ".txt";
+    if(params.action == "reboot" || params.action == "clean") {
+      cmd += " " + params.action;
+      fs.unlink(stateFile, function(err) {
+        console.log("rm file " + stateFile);
+      });
     }
     else {
       cmd += " update"
     }
     var conn = new Client();
     conn.on('ready', function() {
-    conn.exec('sh /home/ruibz/machine.sh', function(err, stream) {
-      if (err) throw err;
+    conn.exec(cmd, function(err, stream) {
       stream.on('close', function(code, signal) {
-      if(params.action == "reboot") {
+      if(params.action == "reboot" || params.action == "clean") {
       }
       else {
-        fs.writeFile(__dirname + "/files/" + params.ip + ".txt", allInfo,  function(err) {
+        fs.writeFile(stateFile, allInfo,  function(err) {
         if (err) { return console.error(err); }
         });
       }
@@ -68,8 +71,10 @@ event.on('readLineFromMachineFile', function (req, res, line) {
   var lines = [];
   var fileName = __dirname + "/files/" + line + ".txt";
   //var formData = '<form action="/" method="get"><input name="ip" value="' + line + '"/> <input type="submit" name="" value="update" /> </form>';
-  var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=update' + '#' + line + '">update</a>';
+  //var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=update' + '#' + line + '">update</a>';
+  var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=update">update</a>';
   var rebootLink = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=reboot">reboot</a>';
+  var cleanLink = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=clean">clean</a>';
   fs.exists(fileName, function(exists){
     if(exists){
       const rl = readline.createInterface({
@@ -84,21 +89,46 @@ event.on('readLineFromMachineFile', function (req, res, line) {
           var indexOfSep = item.indexOf(":");
           var id = item.slice(0, indexOfSep);
           var value = item.slice(indexOfSep+1);
+          var colorRedFlag = false;
           if(id == "host") {
             ;
           }
+          else if(id == "cpt_" && value) {
+            if(Number(value) > 0) {
+              colorRedFlag = true;
+            }
+          }
+          else if(id == "/local" && value) {
+            var indexOfPercent = value.indexOf("%");
+            var exactValue = value.slice(0, indexOfPercent);
+            if(Number(exactValue) > 80) {
+              colorRedFlag = true;
+            }
+          }
+          else if(id == "user" && value) {
+            colorRedFlag = true;
+          }
           else{
+          }
+
+          if(colorRedFlag) {
+            res.write('<td><font size="3" color="red">' + item + '</font></td>');
+          }
+          else {
             res.write('<td><font size="3">' + item + '</font></td>');
           }
+
+
         });
         res.write('<td height="10px">' + updateLink + '</td>');
-        //res.write('<td height="10px">' + rebootLink + '</td>');
+        res.write('<td height="10px">' + rebootLink + '</td>');
+        res.write('<td height="10px">' + cleanLink + '</td>');
         res.write('</tr></table>');
         //console.log(util.inspect(lines));
       });
     }
     else{
-      res.write('<table border="1"><tr><td>' + line + '</td><td>lost</td><td>' + formData + '</td></tr></table>');
+      res.write('<table border="1"><tr><td>' + line + '</td><td>lost</td><td>' + updateLink + '</td></tr></table>');
     }
   });
 });
