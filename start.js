@@ -4,17 +4,34 @@ var path = require('path');
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 const readline = require('readline');
-var fileSplit = require('./fileSplit');
 var test = require('./test');
 var event = new EventEmitter();
 var express = require('express');
 var app = express();
+var querystring = require('querystring');
 
 app.post('/', function (req, res) {
   console.log("post /");
 })
 
 app.get('/', function (req, res) {
+  console.log("get /");
+  var body = "";
+  req.on('data', function (chunk) {
+    body += chunk;
+  });
+  req.on('end', function () {
+    body = querystring.parse(body);
+    console.log(util.inspect(body));
+ 
+    if(body.ip) {
+      console.log("ip:" + body.ip);
+    }
+    else {
+        ;
+    }
+  });
+
   res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
   res.write('<html><head><meta charset="utf-8"><title>machines</title></head> <body>');
 
@@ -22,7 +39,6 @@ app.get('/', function (req, res) {
   openMachineListFile(req, res, fileName);
 
 //  console.log(util.inspect(lines));
-  console.log("get /");
 })
 
 event.on('readLineFromMachineFile', function (req, res, line) {
@@ -54,7 +70,7 @@ event.on('readLineFromMachineFile', function (req, res, line) {
       });
     }
     else{
-      var formData = '<form action="/" method="post"><name="ip" value="' + line + '"/> <input type="submit" name="" value="update" /> </form>';
+      var formData = '<form action="/" method="get"><input name="ip" value="' + line + '"/> <input type="submit" name="" value="update" /> </form>';
       res.write('<table border="1"><tr><th>' + line + '</th><th>lost</th><th>' + formData + '</th></tr></table><br>');
     }
   });
