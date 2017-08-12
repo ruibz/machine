@@ -6,8 +6,6 @@ function Hello(req, res) {
 		name = thyName; 
 	}; 
   this.sayHello = function() { 
-    res.write('hello world');
-    res.end();
     console.log("hello");
   }; 
 }; 
