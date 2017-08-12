@@ -2,20 +2,23 @@ var http = require('http');
 var fs = require('fs');
 var path = require('path');
 var util = require('util');
+var EventEmitter = require('events').EventEmitter;
 const readline = require('readline');
 var fileSplit = require('./fileSplit');
 var test = require('./test');
+var event = new EventEmitter();
 
-function callbackOnMachineListFileDone(req, res) {
+event.on('readDoneFromMachineFile', function(req, res) { 
   res.write('</table></body></html>');
   res.end();
-};
+}); 
 
-function callbackOnMachineListFileLine(req, res, line) {
+
+event.on('readLineFromMachineFile', function (req, res, line) {
   res.write('<tr><th>' + line + '</th></tr>');
-};
+});
 
-function openMachineListFile(req, res, fileName, callbackLine, callbackWhenDone)
+function openMachineListFile(req, res, fileName)
 {
   res.write('<table border="1">');
   const rl = readline.createInterface({
@@ -28,11 +31,11 @@ function openMachineListFile(req, res, fileName, callbackLine, callbackWhenDone)
             ;
         }else{
           var data=fs.readFileSync(fileName,"utf-8");
-          callbackLine(req, res, line.toString());
+          event.emit('readLineFromMachineFile', req, res, line.toString());
         }
     });
   }).on('close', () => {
-    callbackWhenDone(req, res);
+    event.emit('readDoneFromMachineFile', req, res);
   });
 };
 
@@ -41,7 +44,7 @@ http.createServer(function(req, res){
   res.write('<html><head><meta charset="utf-8"><title>machines</title></head> <body>');
 
   var fileName = __dirname.toString() + "/machines.txt";
-  openMachineListFile(req, res, fileName, callbackOnMachineListFileLine, callbackOnMachineListFileDone);
+  openMachineListFile(req, res, fileName);
 
 //  console.log(util.inspect(lines));
   console.log("done!");
