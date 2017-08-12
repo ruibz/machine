@@ -7,6 +7,23 @@ const readline = require('readline');
 var fileSplit = require('./fileSplit');
 var test = require('./test');
 var event = new EventEmitter();
+var express = require('express');
+var app = express();
+
+app.post('/', function (req, res) {
+  console.log("post /");
+})
+
+app.get('/', function (req, res) {
+  res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+  res.write('<html><head><meta charset="utf-8"><title>machines</title></head> <body>');
+
+  var fileName = __dirname.toString() + "/machines.txt";
+  openMachineListFile(req, res, fileName);
+
+//  console.log(util.inspect(lines));
+  console.log("get /");
+})
 
 event.on('readLineFromMachineFile', function (req, res, line) {
   var lines = [];
@@ -22,14 +39,23 @@ event.on('readLineFromMachineFile', function (req, res, line) {
       }).on('close', () => {
         res.write('<table border="1"><tr>');
         lines.forEach(function(item,index){  
-          res.write('<th>' + item + '</th>');
+          var indexOfSep = item.indexOf(":");
+          var id = item.slice(0, indexOfSep);
+          var value = item.slice(indexOfSep+1);
+          if(id == "cpu") {
+            res.write('<th>' + id + '</th>');
+          }
+          else{
+            res.write('<th>' + value + '</th>');
+          }
         });
         res.write('</tr></table><br>');
         //console.log(util.inspect(lines));
       });
     }
     else{
-      res.write('<table border="1"><tr><th>' + line + '</th><th>unknown</th></tr></table><br>');
+      var formData = '<form action="/" method="post"><name="ip" value="' + line + '"/> <input type="submit" name="" value="update" /> </form>';
+      res.write('<table border="1"><tr><th>' + line + '</th><th>lost</th><th>' + formData + '</th></tr></table><br>');
     }
   });
 });
@@ -54,15 +80,9 @@ function openMachineListFile(req, res, fileName)
   });
 };
 
-http.createServer(function(req, res){
-  res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
-  res.write('<html><head><meta charset="utf-8"><title>machines</title></head> <body>');
+//http.createServer(function(req, res){
+//}).listen(8888);
 
-  var fileName = __dirname.toString() + "/machines.txt";
-  openMachineListFile(req, res, fileName);
-
-//  console.log(util.inspect(lines));
-  console.log("done!");
-
-}).listen(8888);
+var server = app.listen(8888, function () {
+})
 
