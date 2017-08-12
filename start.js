@@ -16,18 +16,30 @@ app.get('/', function (req, res) {
   console.log("get /");
   var params = url.parse(req.url, true).query;
  
-  if(params.ip) {
+  if(params.ip && params.action) {
     var allInfo = "";
     console.log("ip:" + params.ip);
+    console.log("action:" + params.action);
+    cmd = 'sh /home/ruibz/machine.sh'
+    if(params.action == "reboot") {
+      cmd += " reboot"
+    }
+    else {
+      cmd += " update"
+    }
     var conn = new Client();
     conn.on('ready', function() {
     conn.exec('sh /home/ruibz/machine.sh', function(err, stream) {
       if (err) throw err;
       stream.on('close', function(code, signal) {
+      if(params.action == "reboot") {
+      }
+      else {
         fs.writeFile(__dirname + "/files/" + params.ip + ".txt", allInfo,  function(err) {
         if (err) { return console.error(err); }
         });
-        conn.end();
+      }
+      conn.end();
       }).on('data', function(data) {
         console.log('STDOUT: ' + data);
         allInfo += data;
@@ -56,7 +68,8 @@ event.on('readLineFromMachineFile', function (req, res, line) {
   var lines = [];
   var fileName = __dirname + "/files/" + line + ".txt";
   //var formData = '<form action="/" method="get"><input name="ip" value="' + line + '"/> <input type="submit" name="" value="update" /> </form>';
-  var formData = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=update' + '#' + line + '">update</a>';
+  var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=update' + '#' + line + '">update</a>';
+  var rebootLink = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=reboot">reboot</a>';
   fs.exists(fileName, function(exists){
     if(exists){
       const rl = readline.createInterface({
@@ -78,7 +91,9 @@ event.on('readLineFromMachineFile', function (req, res, line) {
             res.write('<td><font size="3">' + item + '</font></td>');
           }
         });
-        res.write('<td height="10px">' + formData + '</td></tr></table>');
+        res.write('<td height="10px">' + updateLink + '</td>');
+        //res.write('<td height="10px">' + rebootLink + '</td>');
+        res.write('</tr></table>');
         //console.log(util.inspect(lines));
       });
     }
