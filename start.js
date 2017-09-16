@@ -7,7 +7,7 @@ var util = require('util');
 var events = require('events');
 const readline = require('readline');
 var test = require('./test');
-var event = new events.EventEmitter();
+var emitter = new events.EventEmitter();
 var express = require('express');
 var app = express();
 var querystring = require('querystring');
@@ -67,7 +67,7 @@ app.get('/', function (req, res) {
 //  console.log(util.inspect(lines));
 })
 
-event.on('readLineFromMachineFile', function (req, res, line) {
+emitter.on('readLineFromMachineFile', function (req, res, line) {
   var lines = [];
   var fileName = __dirname + "/files/" + line + ".txt";
   //var formData = '<form action="/" method="get"><input name="ip" value="' + line + '"/> <input type="submit" name="" value="update" /> </form>';
@@ -145,7 +145,7 @@ function openMachineListFile(req, res, fileName)
             ;
         }else{
           var data=fs.readFileSync(fileName,"utf-8");
-          event.emit('readLineFromMachineFile', req, res, line.toString());
+          emitter.emit('readLineFromMachineFile', req, res, line.toString());
         }
     });
   }).on('close', () => {
