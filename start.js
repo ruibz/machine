@@ -7,11 +7,10 @@ var util = require('util');
 var events = require('events');
 const readline = require('readline');
 var test = require('./test');
-var emitter = new events.EventEmitter();
 var express = require('express');
-var app = express();
 var querystring = require('querystring');
 
+var app = express();
 app.get('/', function (req, res) {
   console.log("get /");
 
@@ -67,6 +66,7 @@ app.get('/', function (req, res) {
 //  console.log(util.inspect(lines));
 })
 
+var emitter = new events.EventEmitter();
 emitter.on('readLineFromMachineFile', function (req, res, line) {
   var lines = [];
   var fileName = __dirname + "/files/" + line + ".txt";
@@ -143,16 +143,17 @@ function openMachineListFile(req, res, fileName) {
     });
 
     rl.on('line', (line) => {
-        fs.exists(fileName, function(exists){
-            if(!exists){
-                ;
-            }else{
-                var data=fs.readFileSync(fileName,"utf-8");
-                emitter.emit('readLineFromMachineFile', req, res, line.toString());
-            }
-        });
+        emitter.emit('readLineFromMachineFile', req, res, line.toString());
+//        fs.exists(fileName, function(exists){
+//            if(!exists){
+//               ;
+//            }else{
+//                var data=fs.readFileSync(fileName, "utf-8");
+//               emitter.emit('readLineFromMachineFile', req, res, line.toString());
+//            }
+//        });
     }).on('close', () => {
-      ;
+        res.end();
     });
 }
 
