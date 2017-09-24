@@ -14,7 +14,7 @@ var waitingEventNum = 0;
 var handledEventNum = 0;
 var allMachinesFetched = false;
 
-function fetchMachines(req, res, fileName) {
+function readMachines(req, res, fileName) {
     const rl = readline.createInterface({
         input: fs.createReadStream(fileName),
         terminal: true
@@ -26,7 +26,11 @@ function fetchMachines(req, res, fileName) {
     }).on('close', () => {
         if (handledEventNum == waitingEventNum) {
             console.log('response end when close file');
-            //res.end();
+            res.end();
+            allMachinesFetched = false;
+            waitingEventNum = 0;
+            handledEventNum = 0;
+            return;
         }
         allMachinesFetched = true;
     });
@@ -39,11 +43,116 @@ function openMachineListFile(req, res, fileName) {
             res.end();
             return;
         }
-        fetchMachines(req, res, fileName);
+        readMachines(req, res, fileName);
     })
 }
 
+function readMachineStatusAndSend(req, res, machineIp, fileName) {
+    var lines = [];
+
+    const rl = readline.createInterface({
+        input: fs.createReadStream(fileName),
+        terminal: true
+    });
+
+    var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + machineIp + '&action=update">update</a>';
+    var rebootLink = '<a href="http://127.0.0.1:8888/?ip=' + machineIp + '&action=reboot">reboot</a>';
+    var cleanLink = '<a href="http://127.0.0.1:8888/?ip=' + machineIp + '&action=clean">clean</a>';
+
+    rl.on('line', (line) => {
+        //console.log(line);
+        lines.push(line.toString());
+    }).on('close', () => {
+        res.write('<table border="1" height="20px"><tr><td id="' + machineIp + '">' + machineIp + '</td>');
+
+        lines.forEach(function(item,index){  
+            var indexOfSep = item.indexOf(":");
+            var id = item.slice(0, indexOfSep);
+            var value = item.slice(indexOfSep+1);
+            var colorRedFlag = false;
+            if(id == "host") {
+              ;
+            }
+            else if(id == "cpt_" && value) {
+                if(Number(value) > 0) {
+                    colorRedFlag = true;
+                }
+            }
+            else if(id == "/local" && value) {
+                var indexOfPercent = value.indexOf("%");
+                var exactValue = value.slice(0, indexOfPercent);
+                if(Number(exactValue) > 80) {
+                    colorRedFlag = true;
+                }
+            }
+            else if(id == "user" && value) {
+                colorRedFlag = true;
+            }
+            else{
+                ;
+            }
+
+            console.log(item);
+            if(colorRedFlag) {
+                res.write('<td><font size="3" color="red">' + item + '</font></td>');
+            }
+            else {
+                res.write('<td><font size="3">' + item + '</font></td>');
+            }
+        });
+
+        res.write('<td height="10px">' + updateLink + '</td>');
+        res.write('<td height="10px">' + rebootLink + '</td>');
+        res.write('<td height="10px">' + cleanLink + '</td>');
+        res.write('</tr></table>');
+        //console.log(util.inspect(lines));
+
+        handledEventNum++;
+
+        console.log(handledEventNum);
+        console.log(allMachinesFetched);
+
+        if (allMachinesFetched && (handledEventNum == waitingEventNum)) {
+            console.log('response end');
+            res.end();
+            allMachinesFetched = false;
+            waitingEventNum = 0;
+            handledEventNum = 0;
+        }
+    });
+}
+
+function respondWithMachineStatus(req, res, line) {
+    var machineIp = line;
+    var fileName = __dirname + "/files/" + machineIp + ".txt";
+    //var formData = '<form action="/" method="get"><input name="ip" value="' + machineIp + '"/> <input type="submit" name="" value="update" /> </form>';
+    //var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + machineIp + '&action=update' + '#' + machineIp + '">update</a>';
+    fs.exists(fileName, function(exists) {
+        if (exists) {
+            readMachineStatusAndSend(req, res, machineIp, fileName);
+        }
+        else {
+            var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + machineIp + '&action=update">update</a>';
+            res.write('<table border="1"><tr><td>' + machineIp + '</td><td>lost</td><td>' + updateLink + '</td></tr></table>');
+
+            handledEventNum++;
+
+            console.log(handledEventNum);
+            console.log(allMachinesFetched);
+
+            if (allMachinesFetched && (handledEventNum == waitingEventNum)) {
+                console.log('response end');
+                res.end();
+                allMachinesFetched = false;
+                waitingEventNum = 0;
+                handledEventNum = 0;
+            }
+        }
+    });
+}
+
 var app = express();
+
 app.get('/', function (req, res) {
   console.log("get /");
 
@@ -102,84 +211,7 @@ app.get('/', function (req, res) {
 var emitter = new events.EventEmitter();
 
 emitter.on('readLineFromMachineFile', function (req, res, line) {
-  var lines = [];
-  var fileName = __dirname + "/files/" + line + ".txt";
-  //var formData = '<form action="/" method="get"><input name="ip" value="' + line + '"/> <input type="submit" name="" value="update" /> </form>';
-  //var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=update' + '#' + line + '">update</a>';
-  var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=update">update</a>';
-  var rebootLink = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=reboot">reboot</a>';
-  var cleanLink = '<a href="http://127.0.0.1:8888/?ip=' + line + '&action=clean">clean</a>';
-  fs.exists(fileName, function(exists) {
-      if (exists) {
-          const rl = readline.createInterface({
-              input: fs.createReadStream(fileName),
-              terminal: true
-          });
-
-      rl.on('line', (line) => {
-          //console.log(line);
-          lines.push(line.toString());
-      }).on('close', () => {
-          res.write('<table border="1" height="20px"><tr><td id="' + line + '">' + line + '</td>');
-
-          lines.forEach(function(item,index){  
-              var indexOfSep = item.indexOf(":");
-              var id = item.slice(0, indexOfSep);
-              var value = item.slice(indexOfSep+1);
-              var colorRedFlag = false;
-              if(id == "host") {
-                ;
-              }
-              else if(id == "cpt_" && value) {
-                  if(Number(value) > 0) {
-                      colorRedFlag = true;
-                  }
-              }
-              else if(id == "/local" && value) {
-                  var indexOfPercent = value.indexOf("%");
-                  var exactValue = value.slice(0, indexOfPercent);
-                  if(Number(exactValue) > 80) {
-                      colorRedFlag = true;
-                  }
-              }
-              else if(id == "user" && value) {
-                  colorRedFlag = true;
-              }
-              else{
-                  ;
-              }
-
-              console.log(item);
-              if(colorRedFlag) {
-                  res.write('<td><font size="3" color="red">' + item + '</font></td>');
-              }
-              else {
-                  res.write('<td><font size="3">' + item + '</font></td>');
-              }
-
-
-        });
-
-        res.write('<td height="10px">' + updateLink + '</td>');
-        res.write('<td height="10px">' + rebootLink + '</td>');
-        res.write('<td height="10px">' + cleanLink + '</td>');
-        res.write('</tr></table>');
-        //console.log(util.inspect(lines));
-      });
-    }
-    else{
-        res.write('<table border="1"><tr><td>' + line + '</td><td>lost</td><td>' + updateLink + '</td></tr></table>');
-    }
-  });
-  
-  handledEventNum++;
-  console.log(handledEventNum);
-  console.log(allMachinesFetched);
-
-  if (allMachinesFetched && (handledEventNum == waitingEventNum)) {
-      console.log('response end');
-      res.end();
-  }
+    respondWithMachineStatus(req, res, line);
 });
 
 //http.createServer(function(req, res){
