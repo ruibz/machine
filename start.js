@@ -14,7 +14,7 @@ var waitingEventNum = 0;
 var handledEventNum = 0;
 var allMachinesFetched = false;
 
-function openMachineListFile(req, res, fileName) {
+function fetchMachines(req, res, fileName) {
     const rl = readline.createInterface({
         input: fs.createReadStream(fileName),
         terminal: true
@@ -33,7 +33,6 @@ function openMachineListFile(req, res, fileName) {
 //        });
     }).on('close', () => {
         allMachinesFetched = true;
-//        res.end();
     });
 }
 
@@ -96,14 +95,13 @@ app.get('/', function (req, res) {
         }
         emitter.emit('openMachineListFile', req, res, fileName);
     })
-    //openMachineListFile(req, res, fileName);
 
 //  console.log(util.inspect(lines));
 })
 
 var emitter = new events.EventEmitter();
 
-emitter.on('openMachineListFile', openMachineListFile);
+emitter.on('openMachineListFile', fetchMachines);
 
 emitter.on('readLineFromMachineFile', function (req, res, line) {
   var lines = [];
@@ -177,8 +175,9 @@ emitter.on('readLineFromMachineFile', function (req, res, line) {
   });
   
   handledEventNum++;
-  if (allMachinesFetched == true && handledEventNum == waitingEventNum) {
-      res.end()
+
+  if (allMachinesFetched && (handledEventNum == waitingEventNum)) {
+      res.end();
   }
 });
 
