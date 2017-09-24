@@ -10,6 +10,33 @@ var test = require('./test');
 var express = require('express');
 var querystring = require('querystring');
 
+var waitingEventNum = 0;
+var handledEventNum = 0;
+var allMachinesFetched = false;
+
+function openMachineListFile(req, res, fileName) {
+    const rl = readline.createInterface({
+        input: fs.createReadStream(fileName),
+        terminal: true
+    });
+
+    rl.on('line', (line) => {
+        waitingEventNum++;
+        emitter.emit('readLineFromMachineFile', req, res, line.toString());
+//        fs.exists(fileName, function(exists){
+//            if(!exists){
+//               ;
+//            }else{
+//                var data=fs.readFileSync(fileName, "utf-8");
+//               emitter.emit('readLineFromMachineFile', req, res, line.toString());
+//            }
+//        });
+    }).on('close', () => {
+        allMachinesFetched = true;
+//        res.end();
+    });
+}
+
 var app = express();
 app.get('/', function (req, res) {
   console.log("get /");
@@ -60,13 +87,24 @@ app.get('/', function (req, res) {
   res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
   res.write('<html><head><meta charset="utf-8"><title>machines</title></head> <body>');
 
-  var fileName = __dirname.toString() + "/machines.txt";
-  openMachineListFile(req, res, fileName);
+    var fileName = __dirname.toString() + "/machines.txt";
+    fs.exists(fileName, function (exists) {
+        if (!exists) {
+            console.log('no such file: ' + fileName);
+            res.end();
+            return;
+        }
+        emitter.emit('openMachineListFile', req, res, fileName);
+    })
+    //openMachineListFile(req, res, fileName);
 
 //  console.log(util.inspect(lines));
 })
 
 var emitter = new events.EventEmitter();
+
+emitter.on('openMachineListFile', openMachineListFile);
+
 emitter.on('readLineFromMachineFile', function (req, res, line) {
   var lines = [];
   var fileName = __dirname + "/files/" + line + ".txt";
@@ -83,6 +121,7 @@ emitter.on('readLineFromMachineFile', function (req, res, line) {
           });
 
       rl.on('line', (line) => {
+          //console.log(line);
           lines.push(line.toString());
       }).on('close', () => {
           res.write('<table border="1" height="20px"><tr><td id="' + line + '">' + line + '</td>');
@@ -111,8 +150,10 @@ emitter.on('readLineFromMachineFile', function (req, res, line) {
                   colorRedFlag = true;
               }
               else{
+                  ;
               }
 
+              console.log(item);
               if(colorRedFlag) {
                   res.write('<td><font size="3" color="red">' + item + '</font></td>');
               }
@@ -134,28 +175,12 @@ emitter.on('readLineFromMachineFile', function (req, res, line) {
         res.write('<table border="1"><tr><td>' + line + '</td><td>lost</td><td>' + updateLink + '</td></tr></table>');
     }
   });
+  
+  handledEventNum++;
+  if (allMachinesFetched == true && handledEventNum == waitingEventNum) {
+      res.end()
+  }
 });
-
-function openMachineListFile(req, res, fileName) {
-    const rl = readline.createInterface({
-        input: fs.createReadStream(fileName),
-        terminal: true
-    });
-
-    rl.on('line', (line) => {
-        emitter.emit('readLineFromMachineFile', req, res, line.toString());
-//        fs.exists(fileName, function(exists){
-//            if(!exists){
-//               ;
-//            }else{
-//                var data=fs.readFileSync(fileName, "utf-8");
-//               emitter.emit('readLineFromMachineFile', req, res, line.toString());
-//            }
-//        });
-    }).on('close', () => {
-        res.end();
-    });
-}
 
 //http.createServer(function(req, res){
 //}).listen(8888);
