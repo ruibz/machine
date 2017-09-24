@@ -23,17 +23,24 @@ function fetchMachines(req, res, fileName) {
     rl.on('line', (line) => {
         waitingEventNum++;
         emitter.emit('readLineFromMachineFile', req, res, line.toString());
-//        fs.exists(fileName, function(exists){
-//            if(!exists){
-//               ;
-//            }else{
-//                var data=fs.readFileSync(fileName, "utf-8");
-//               emitter.emit('readLineFromMachineFile', req, res, line.toString());
-//            }
-//        });
     }).on('close', () => {
+        if (handledEventNum == waitingEventNum) {
+            console.log('response end when close file');
+            //res.end();
+        }
         allMachinesFetched = true;
     });
+}
+
+function openMachineListFile(req, res, fileName) {
+    fs.exists(fileName, function (exists) {
+        if (!exists) {
+            console.log('no such file: ' + fileName);
+            res.end();
+            return;
+        }
+        fetchMachines(req, res, fileName);
+    })
 }
 
 var app = express();
@@ -87,21 +94,12 @@ app.get('/', function (req, res) {
   res.write('<html><head><meta charset="utf-8"><title>machines</title></head> <body>');
 
     var fileName = __dirname.toString() + "/machines.txt";
-    fs.exists(fileName, function (exists) {
-        if (!exists) {
-            console.log('no such file: ' + fileName);
-            res.end();
-            return;
-        }
-        emitter.emit('openMachineListFile', req, res, fileName);
-    })
+    openMachineListFile(req, res, fileName);
 
 //  console.log(util.inspect(lines));
 })
 
 var emitter = new events.EventEmitter();
-
-emitter.on('openMachineListFile', fetchMachines);
 
 emitter.on('readLineFromMachineFile', function (req, res, line) {
   var lines = [];
@@ -175,8 +173,11 @@ emitter.on('readLineFromMachineFile', function (req, res, line) {
   });
   
   handledEventNum++;
+  console.log(handledEventNum);
+  console.log(allMachinesFetched);
 
   if (allMachinesFetched && (handledEventNum == waitingEventNum)) {
+      console.log('response end');
       res.end();
   }
 });
