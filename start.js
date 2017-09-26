@@ -21,17 +21,10 @@ function readMachines(req, res, fileName) {
     });
 
     rl.on('line', (line) => {
+        if (line == '') return;
         waitingEventNum++;
         emitter.emit('readLineFromMachineFile', req, res, line.toString());
     }).on('close', () => {
-        if (handledEventNum == waitingEventNum) {
-            console.log('response end when close file');
-            res.end();
-            allMachinesFetched = false;
-            waitingEventNum = 0;
-            handledEventNum = 0;
-            return;
-        }
         allMachinesFetched = true;
     });
 }
@@ -113,11 +106,7 @@ function readMachineStatusAndSend(req, res, machineIp, fileName) {
         console.log(allMachinesFetched);
 
         if (allMachinesFetched && (handledEventNum == waitingEventNum)) {
-            console.log('response end');
-            res.end();
-            allMachinesFetched = false;
-            waitingEventNum = 0;
-            handledEventNum = 0;
+            emitter.emit('responseDone', res);
         }
     });
 }
@@ -141,15 +130,25 @@ function respondWithMachineStatus(req, res, line) {
             console.log(allMachinesFetched);
 
             if (allMachinesFetched && (handledEventNum == waitingEventNum)) {
-                console.log('response end');
-                res.end();
-                allMachinesFetched = false;
-                waitingEventNum = 0;
-                handledEventNum = 0;
+                emitter.emit('responseDone', res);
             }
         }
     });
 }
+
+var emitter = new events.EventEmitter();
+
+emitter.on('readLineFromMachineFile', function (req, res, line) {
+    respondWithMachineStatus(req, res, line);
+});
+
+emitter.on('responseDone', function (res) {
+    console.log('response done');
+    res.end();
+    allMachinesFetched = false;
+    waitingEventNum = 0;
+    handledEventNum = 0;
+});
 
 var app = express();
 
@@ -207,12 +206,6 @@ app.get('/', function (req, res) {
 
 //  console.log(util.inspect(lines));
 })
-
-var emitter = new events.EventEmitter();
-
-emitter.on('readLineFromMachineFile', function (req, res, line) {
-    respondWithMachineStatus(req, res, line);
-});
 
 //http.createServer(function(req, res){
 //}).listen(8888);
