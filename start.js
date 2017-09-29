@@ -33,6 +33,7 @@ function openMachineListFile(req, res, fileName) {
     fs.exists(fileName, function (exists) {
         if (!exists) {
             console.log('no such file: ' + fileName);
+            res.write('machine list file lost </body>');
             res.end();
             return;
         }
@@ -40,7 +41,7 @@ function openMachineListFile(req, res, fileName) {
     })
 }
 
-function readMachineStatusAndSend(req, res, machineIp, fileName) {
+function readMachineStatusAndSend(req, res, machine, fileName) {
     var lines = [];
 
     const rl = readline.createInterface({
@@ -48,15 +49,15 @@ function readMachineStatusAndSend(req, res, machineIp, fileName) {
         terminal: true
     });
 
-    var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + machineIp + '&action=update">update</a>';
-    var rebootLink = '<a href="http://127.0.0.1:8888/?ip=' + machineIp + '&action=reboot">reboot</a>';
-    var cleanLink = '<a href="http://127.0.0.1:8888/?ip=' + machineIp + '&action=clean">clean</a>';
+    var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + machine + '&action=update">update</a>';
+    var rebootLink = '<a href="http://127.0.0.1:8888/?ip=' + machine + '&action=reboot">reboot</a>';
+    var cleanLink = '<a href="http://127.0.0.1:8888/?ip=' + machine + '&action=clean">clean</a>';
 
     rl.on('line', (line) => {
         //console.log(line);
         lines.push(line.toString());
     }).on('close', () => {
-        res.write('<table border="1" height="20px"><tr><td id="' + machineIp + '">' + machineIp + '</td>');
+        res.write('<table border="1" height="20px"><tr><td id="' + machine + '">' + machine + '</td>');
 
         lines.forEach(function(item,index){  
             var indexOfSep = item.indexOf(":");
@@ -111,18 +112,21 @@ function readMachineStatusAndSend(req, res, machineIp, fileName) {
     });
 }
 
-function respondWithMachineStatus(req, res, line) {
-    var machineIp = line;
-    var fileName = __dirname + "/files/" + machineIp + ".txt";
-    //var formData = '<form action="/" method="get"><input name="ip" value="' + machineIp + '"/> <input type="submit" name="" value="update" /> </form>';
-    //var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + machineIp + '&action=update' + '#' + machineIp + '">update</a>';
-    fs.exists(fileName, function(exists) {
+function gatherMachineStatus(req, res, machine) {
+    respondWithMachineStatus(req, res, machine);
+}
+
+function respondWithMachineStatus(req, res, machine) {
+    var fileName = __dirname + "/files/" + machine + ".txt";
+    //var formData = '<form action="/" method="get"><input name="ip" value="' + machine + '"/> <input type="submit" name="" value="update" /> </form>';
+    //var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + machine + '&action=update' + '#' + machine + '">update</a>';
+    fs.exists(fileName, function (exists) {
         if (exists) {
-            readMachineStatusAndSend(req, res, machineIp, fileName);
+            readMachineStatusAndSend(req, res, machine, fileName);
         }
         else {
-            var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + machineIp + '&action=update">update</a>';
-            res.write('<table border="1"><tr><td>' + machineIp + '</td><td>lost</td><td>' + updateLink + '</td></tr></table>');
+            var updateLink = '<a href="http://127.0.0.1:8888/?ip=' + machine + '&action=update">update</a>';
+            res.write('<table border="1"><tr><td>' + machine + '</td><td>lost</td><td>' + updateLink + '</td></tr></table>');
 
             handledEventNum++;
 
@@ -139,7 +143,7 @@ function respondWithMachineStatus(req, res, line) {
 var emitter = new events.EventEmitter();
 
 emitter.on('readLineFromMachineFile', function (req, res, line) {
-    respondWithMachineStatus(req, res, line);
+    gatherMachineStatus(req, res, line);
 });
 
 emitter.on('responseDone', function (res) {
@@ -198,8 +202,8 @@ app.get('/', function (req, res) {
     });
   }
 
-  res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
-  res.write('<html><head><meta charset="utf-8"><title>machines</title></head> <body>');
+    res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+    res.write('<html><head><meta charset="utf-8"><title>machines</title></head> <body>');
 
     var fileName = __dirname.toString() + "/machines.txt";
     openMachineListFile(req, res, fileName);
