@@ -153,7 +153,7 @@ function respondWithMachineStatus(req, res, machine) {
 var emitter = new events.EventEmitter();
 
 emitter.on('readLineFromMachineFile', function (req, res, line) {
-    gatherMachineStatus(req, res, line);
+    gatherMachineStatus(req, res, line.replace(/(^\s+)|(\s+$)/g,""));
 });
 
 emitter.on('responseDone', function (res) {
