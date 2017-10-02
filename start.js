@@ -9,6 +9,8 @@ const readline = require('readline');
 var test = require('./test');
 var express = require('express');
 var querystring = require('querystring');
+var execFile = require('child_process').execFile;
+var exec = require('child_process').exec
 
 var waitingEventNum = 0;
 var handledEventNum = 0;
@@ -113,7 +115,15 @@ function readMachineStatusAndSend(req, res, machine, fileName) {
 }
 
 function gatherMachineStatus(req, res, machine) {
-    respondWithMachineStatus(req, res, machine);
+    var cmd = 'ssh -o "StrictHostKeyChecking no" ruibz@' + machine + ' "sh gatherMachineStatus.sh" > ./files/' + machine + '.txt'
+    console.log(cmd);
+    exec(cmd, function (error, stdout, stderr) {
+        if (error) {
+            console.error(error);
+            throw error;
+        }
+        respondWithMachineStatus(req, res, machine);
+    });
 }
 
 function respondWithMachineStatus(req, res, machine) {
