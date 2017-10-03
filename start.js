@@ -66,7 +66,7 @@ function readMachineStatusAndSend(req, res, machine, fileName) {
             var id = item.slice(0, indexOfSep);
             var value = item.slice(indexOfSep + 1);
             var colorRedFlag = false;
-            if (id == "/local" && value) {
+            if (id == "/var/fpwork" && value) {
                 var indexOfPercent = value.indexOf("%");
                 var exactValue = value.slice(0, indexOfPercent);
                 if(Number(exactValue) > 80) {
