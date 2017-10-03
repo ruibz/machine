@@ -61,20 +61,12 @@ function readMachineStatusAndSend(req, res, machine, fileName) {
     }).on('close', () => {
         res.write('<table border="1" height="20px"><tr><td id="' + machine + '">' + machine + '</td>');
 
-        lines.forEach(function(item,index){  
+        lines.forEach(function (item, index) {  
             var indexOfSep = item.indexOf(":");
             var id = item.slice(0, indexOfSep);
-            var value = item.slice(indexOfSep+1);
+            var value = item.slice(indexOfSep + 1);
             var colorRedFlag = false;
-            if(id == "host") {
-              ;
-            }
-            else if(id == "cpt_" && value) {
-                if(Number(value) > 0) {
-                    colorRedFlag = true;
-                }
-            }
-            else if(id == "/local" && value) {
+            if (id == "/local" && value) {
                 var indexOfPercent = value.indexOf("%");
                 var exactValue = value.slice(0, indexOfPercent);
                 if(Number(exactValue) > 80) {
@@ -84,12 +76,9 @@ function readMachineStatusAndSend(req, res, machine, fileName) {
             else if(id == "user" && value) {
                 colorRedFlag = true;
             }
-            else{
-                ;
-            }
 
             console.log(item);
-            if(colorRedFlag) {
+            if (colorRedFlag) {
                 res.write('<td><font size="3" color="red">' + item + '</font></td>');
             }
             else {
